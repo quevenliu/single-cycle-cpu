@@ -243,22 +243,30 @@ module CHIP #(                                                                  
                         wdata = rdata1 ^ rdata2;
                     end
                     {MUL_FUNC3, MUL_FUNC7}: begin
-                        alu_valid = 1;
                         alu_A = rdata1;
                         alu_B = rdata2;
                         alu_op = I_MUL;
                         wdata = alu_result;
-                        if (alu_done && state == S_MUL) begin
-                            state_nxt = S_EX;
-                            reg_wen = 1;
+                        if (state == S_MUL) begin
+                            if (alu_done) begin //Last step of MUL
+                                state_nxt = S_EX;
+                                reg_wen = 1;
+                                alu_valid = 0;
+                            end
+                            else begin // MUL is not done yet
+                                state_nxt = S_MUL;
+                                next_PC = PC;
+                                reg_wen = 0;
+                                alu_valid = 0;
+                            end
                         end
-                        else begin
+                        else begin //First step of MUL
                             state_nxt = S_MUL;
                             next_PC = PC;
                             reg_wen = 0;
-                            alu_valid = 0;
+                            alu_valid = 1;
                         end
-                    end
+                    end   
                     default: begin
                         alu_valid = 0;
                         alu_A = 0;
@@ -362,15 +370,6 @@ module CHIP #(                                                                  
                 state_nxt = S_EX;
             end
         endcase
-        
-
-
-        $display("instruction: %h", instruction);
-        $display("rs1(%d): %d", rs1, rdata1);
-        $display("rs2(%d): %d", rs2, rdata2);
-        $display("rd(%d): %d", rd, wdata);
-        $display("PC: %d", PC);
-        $display("next_PC: %d", next_PC);
         
     end
     // Todo: any combinational/sequential circuit
