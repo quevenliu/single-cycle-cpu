@@ -359,6 +359,7 @@ module CHIP #(                                                                  
             end
         endcase
         $display("instruction: %d", instruction);
+        $display("PC: %d", PC);
         
         if (state != S_EX) begin
             next_PC = PC;
