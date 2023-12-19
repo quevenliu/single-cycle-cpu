@@ -249,6 +249,7 @@ module CHIP #(                                                                  
                         end
                         else begin
                             state_nxt = S_MUL;
+                            next_PC = PC;
                             reg_wen = 0;
                         end
                         alu_valid = 1;
@@ -361,18 +362,14 @@ module CHIP #(                                                                  
             end
         endcase
         
-        if (state != S_EX) begin
-            next_PC = PC;
-        end
-        else begin
-            next_PC = PC + 4;
-        end 
+
 
         $display("instruction: %h", instruction);
         $display("rs1(%d): %d", rs1, rdata1);
         $display("rs2(%d): %d", rs2, rdata2);
         $display("rd(%d): %d", rd, wdata);
         $display("PC: %d", PC);
+        $display("next_PC: %d", next_PC);
         
     end
     // Todo: any combinational/sequential circuit
@@ -387,7 +384,6 @@ module CHIP #(                                                                  
             PC <= PC;
             is_finish <= is_finish_nxt;
             state <= state_nxt;
-
         end
         else begin
             PC <= next_PC;
