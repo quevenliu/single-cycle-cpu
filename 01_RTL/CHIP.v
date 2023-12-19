@@ -291,7 +291,7 @@ module CHIP #(                                                                  
                         wdata = rdata1 << imm;
                     end
                     SRAI_FUNC3: begin
-                        wdata = rdata1 >> imm;
+                        wdata = $signed(rdata1) >> imm;
                     end
                     default: begin
                         alu_valid = 0;
