@@ -243,6 +243,11 @@ module CHIP #(                                                                  
                         wdata = rdata1 ^ rdata2;
                     end
                     {MUL_FUNC3, MUL_FUNC7}: begin
+                        alu_valid = 1;
+                        alu_A = rdata1;
+                        alu_B = rdata2;
+                        alu_op = I_MUL;
+                        wdata = alu_result;
                         if (alu_done && state == S_MUL) begin
                             state_nxt = S_EX;
                             reg_wen = 1;
@@ -251,12 +256,8 @@ module CHIP #(                                                                  
                             state_nxt = S_MUL;
                             next_PC = PC;
                             reg_wen = 0;
+                            alu_valid = 0;
                         end
-                        alu_valid = 1;
-                        alu_A = rdata1;
-                        alu_B = rdata2;
-                        alu_op = I_MUL;
-                        wdata = alu_result;
                     end
                     default: begin
                         alu_valid = 0;
