@@ -52,7 +52,7 @@ module CHIP #(                                                                  
 
     parameter ECALL = 7'b1110011;
 
-    //====== funct3 ======
+    // funct3
     parameter ADD_FUNC3  = 3'b000;
     parameter SUB_FUNC3  = 3'b000;
     parameter XOR_FUNC3  = 3'b100;
@@ -68,7 +68,7 @@ module CHIP #(                                                                  
     parameter BLT_FUNC3   = 3'b100;
     parameter BGE_FUNC3   = 3'b101;
 
-    //====== funct7 ======
+    // funct7
     parameter ADD_FUNC7 = 7'b0000000;
     parameter SUB_FUNC7 = 7'b0100000;
     parameter XOR_FUNC7 = 7'b0000000;
@@ -76,7 +76,7 @@ module CHIP #(                                                                  
 
     parameter I_MUL  = 3'd6;
 
-    //===== FSM parameter ====
+    // FSM states
     parameter S_IDLE = 2'd0;
     parameter S_EX = 2'd1;
     parameter S_MEM = 2'd2;
