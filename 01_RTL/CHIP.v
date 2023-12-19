@@ -5,7 +5,7 @@ module CHIP #(                                                                  
     // clock                                                                                    //
         input               i_clk,                                                              //
         input               i_rst_n,                                                            //
-    // instruction memory                                                                       //
+    // i_IMEM_data memory                                                                       //
         input  [BIT_W-1:0]  i_IMEM_data,                                                        //
         output [BIT_W-1:0]  o_IMEM_addr,                                                        //
         output              o_IMEM_cen,                                                         //
@@ -86,7 +86,7 @@ module CHIP #(                                                                  
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
     
     // TODO: any declaration
-        reg [BIT_W-1:0] PC=0, next_PC;
+        reg [BIT_W-1:0] PC = 32'h00010000, next_PC;
         reg mem_cen, mem_wen;
         reg [BIT_W-1:0] mem_addr, mem_wdata, mem_rdata;
         reg mem_stall;
@@ -100,7 +100,6 @@ module CHIP #(                                                                  
         reg [BIT_W-1:0] alu_result;
         reg [BIT_W-1:0] final_result;
 
-        reg [BIT_W-1:0] instruction;
 
         reg is_finish, is_finish_nxt;
 
@@ -157,8 +156,6 @@ module CHIP #(                                                                  
     assign o_DMEM_wen = mem_wen;
     assign o_DMEM_addr = mem_addr;
     assign o_DMEM_wdata = mem_wdata;
-
-
     assign o_finish = is_finish;
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -168,16 +165,14 @@ module CHIP #(                                                                  
 
     always @(*) begin
 
-        instruction = i_IMEM_data;
-        mem_rdata = i_DMEM_rdata;
         mem_stall = i_DMEM_stall;
-    
-        op_code = instruction[6:0];
-        funct3 = instruction[14:12];
-        funct7 = instruction[31:25];
-        rs1 = instruction[19:15];
-        rs2 = instruction[24:20];
-        rd = instruction[11:7];
+        mem_rdata = i_DMEM_rdata;
+        op_code = i_IMEM_data[6:0];
+        funct3 = i_IMEM_data[14:12];
+        funct7 = i_IMEM_data[31:25];
+        rs1 = i_IMEM_data[19:15];
+        rs2 = i_IMEM_data[24:20];
+        rd = i_IMEM_data[11:7];
 
         next_PC = PC + 4;
         is_finish_nxt = 0;
@@ -205,21 +200,21 @@ module CHIP #(                                                                  
             AUIPC: begin
                 reg_wen = 1;
                 state_nxt = S_EX;
-                imm[31:12] = instruction[31:12];
+                imm[31:12] = i_IMEM_data[31:12];
                 imm[11:0] = 0;
                 wdata = PC + imm;
             end
             JAL: begin
                 reg_wen = 1;
                 state_nxt = S_EX;
-                imm[20:0] = {instruction[31], instruction[19:12], instruction[20], instruction[30:21], 1'b0};
+                imm[20:0] = {i_IMEM_data[31], i_IMEM_data[19:12], i_IMEM_data[20], i_IMEM_data[30:21], 1'b0};
                 wdata = PC + 4;
                 next_PC = PC + imm;
             end
             JALR: begin
                 reg_wen = 1;
                 state_nxt = S_EX;
-                imm[11:0] = instruction[31:20];
+                imm[11:0] = i_IMEM_data[31:20];
                 wdata = PC + 4;
                 next_PC = $signed(rdata1) + $signed(imm);
             end
@@ -266,7 +261,7 @@ module CHIP #(                                                                  
             IMM_OPS: begin
                 state_nxt = S_EX;
                 reg_wen = 1;
-                imm[11:0] = instruction[31:20];
+                imm[11:0] = i_IMEM_data[31:20];
                 case (funct3)
                     ADDI_FUNC3: begin
                         final_result = $signed(rdata1) + $signed(imm);
@@ -293,21 +288,21 @@ module CHIP #(                                                                  
                 state_nxt = S_EX;
                 wdata = mem_rdata;
                 mem_cen = 1;
-                mem_addr = $signed(rdata1) + $signed(instruction[31:20]);
+                mem_addr = $signed(rdata1) + $signed(i_IMEM_data[31:20]);
                 mem_wen = 0;
                 reg_wen = 1;
             end
             SW: begin
                 state_nxt = S_EX;
                 mem_cen = 1;
-                mem_addr = $signed(rdata1) + $signed(instruction[31:25]);
+                mem_addr = $signed(rdata1) + $signed(i_IMEM_data[31:25]);
                 mem_wen = 1;
                 mem_wdata = rdata2;
                 reg_wen = 0;
             end
             B_TYPE: begin
                 state_nxt = S_EX;
-                imm[12:0] = {instruction[31], instruction[7], instruction[30:25], instruction[11:8], 1'b0};
+                imm[12:0] = {i_IMEM_data[31], i_IMEM_data[7], i_IMEM_data[30:25], i_IMEM_data[11:8], 1'b0};
                 case (funct3)
                     BEQ_FUNC3: begin
                         if (rdata1 == rdata2) begin
@@ -358,8 +353,6 @@ module CHIP #(                                                                  
                 state_nxt = S_EX;
             end
         endcase
-        $display("instruction: %d", instruction);
-        $display("PC: %d", PC);
         
         if (state != S_EX) begin
             next_PC = PC;
@@ -488,7 +481,7 @@ module MULDIV_unit #(
     input                       i_valid, // input valid signal
     input [DATA_W - 1 : 0]      i_A,     // input operand A
     input [DATA_W - 1 : 0]      i_B,     // input operand B
-    input [         2 : 0]      i_inst,  // instruction
+    input [         2 : 0]      i_inst,  // i_IMEM_data
 
     output [2*DATA_W - 1 : 0]   o_data,  // output value
     output                      o_done   // output valid signal
