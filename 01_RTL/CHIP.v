@@ -5,7 +5,7 @@ module CHIP #(                                                                  
     // clock                                                                                    //
         input               i_clk,                                                              //
         input               i_rst_n,                                                            //
-    // i_IMEM_data memory                                                                       //
+    // instruction memory                                                                       //
         input  [BIT_W-1:0]  i_IMEM_data,                                                        //
         output [BIT_W-1:0]  o_IMEM_addr,                                                        //
         output              o_IMEM_cen,                                                         //
@@ -28,6 +28,10 @@ module CHIP #(                                                                  
 // Parameters
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
+    initial begin
+            $fsdbDumpfile ("CHIP.fsdb");
+            $fsdbDumpvars (1, CHIP);
+        end
 
 
 //OP code
@@ -86,19 +90,22 @@ module CHIP #(                                                                  
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
     
     // TODO: any declaration
-        reg [BIT_W-1:0] PC = 32'h00010000, next_PC;
+        reg [BIT_W-1:0] PC, next_PC;
         reg mem_cen, mem_wen;
         reg [BIT_W-1:0] mem_addr, mem_wdata, mem_rdata;
         reg mem_stall;
 
         reg reg_wen;
-        reg [BIT_W-1:0] rs1, rs2, rd, wdata, rdata1, rdata2;
+        reg [4:0] rs1, rs2, rd;
+        reg [BIT_W-1:0]  wdata, rdata1, rdata2;
 
         reg alu_valid, alu_done;
         reg [BIT_W-1:0] alu_A, alu_B;
         reg [2:0] alu_op;
         reg [BIT_W-1:0] alu_result;
         reg [BIT_W-1:0] final_result;
+
+        reg [BIT_W-1:0] instruction;
 
 
         reg is_finish, is_finish_nxt;
@@ -164,15 +171,15 @@ module CHIP #(                                                                  
     
 
     always @(*) begin
-
+        instruction = i_IMEM_data;
         mem_stall = i_DMEM_stall;
         mem_rdata = i_DMEM_rdata;
-        op_code = i_IMEM_data[6:0];
-        funct3 = i_IMEM_data[14:12];
-        funct7 = i_IMEM_data[31:25];
-        rs1 = i_IMEM_data[19:15];
-        rs2 = i_IMEM_data[24:20];
-        rd = i_IMEM_data[11:7];
+        op_code = instruction[6:0];
+        funct3 = instruction[14:12];
+        funct7 = instruction[31:25];
+        rs1 = instruction[19:15];
+        rs2 = instruction[24:20];
+        rd = instruction[11:7];
 
         next_PC = PC + 4;
         is_finish_nxt = 0;
@@ -185,6 +192,8 @@ module CHIP #(                                                                  
         alu_A = 0;
         alu_B = 0;
         alu_op = 0;
+        imm = 0;
+        wdata = 0;
 
         alu_result = alu_result_w;
         alu_done = alu_done_w;
@@ -200,38 +209,38 @@ module CHIP #(                                                                  
             AUIPC: begin
                 reg_wen = 1;
                 state_nxt = S_EX;
-                imm[31:12] = i_IMEM_data[31:12];
+                imm[31:12] = instruction[31:12];
                 imm[11:0] = 0;
                 wdata = PC + imm;
             end
             JAL: begin
                 reg_wen = 1;
                 state_nxt = S_EX;
-                imm[20:0] = {i_IMEM_data[31], i_IMEM_data[19:12], i_IMEM_data[20], i_IMEM_data[30:21], 1'b0};
+                imm[20:0] = {instruction[31], instruction[19:12], instruction[20], instruction[30:21], 1'b0};
                 wdata = PC + 4;
                 next_PC = $signed({1'b0, PC}) + $signed(imm[20:0]);
             end
             JALR: begin
                 reg_wen = 1;
                 state_nxt = S_EX;
-                imm[11:0] = i_IMEM_data[31:20];
+                imm[11:0] = instruction[31:20];
                 wdata = PC + 4;
-                next_PC = $signed(rdata1) + $signed(imm[11:0]);
+                next_PC = $signed({1'b0, rdata1}) + $signed(imm[11:0]);
             end
             R_TYPE: begin
                 reg_wen = 1;
                 case ({funct3, funct7})
                     {ADD_FUNC3, ADD_FUNC7}: begin
                         state_nxt = S_EX;
-                        final_result = $signed(rdata1) + $signed(rdata2);
+                        wdata = $signed(rdata1) + $signed(rdata2);
                     end
                     {SUB_FUNC3, SUB_FUNC7}: begin
                         state_nxt = S_EX;
-                        final_result = $signed(rdata1) - $signed(rdata2);
+                        wdata = $signed(rdata1) - $signed(rdata2);
                     end
                     {XOR_FUNC3, XOR_FUNC7}: begin
                         state_nxt = S_EX;
-                        final_result = rdata1 ^ rdata2;
+                        wdata = rdata1 ^ rdata2;
                     end
                     {MUL_FUNC3, MUL_FUNC7}: begin
                         if (alu_done && state == S_MUL) begin
@@ -246,7 +255,7 @@ module CHIP #(                                                                  
                         alu_A = rdata1;
                         alu_B = rdata2;
                         alu_op = I_MUL;
-                        final_result = alu_result;
+                        wdata = alu_result;
                     end
                     default: begin
                         alu_valid = 0;
@@ -256,24 +265,23 @@ module CHIP #(                                                                  
                         state_nxt = S_EX;
                     end
                 endcase
-                wdata = final_result;
             end
             IMM_OPS: begin
                 state_nxt = S_EX;
                 reg_wen = 1;
-                imm[11:0] = i_IMEM_data[31:20];
+                imm[11:0] = instruction[31:20];
                 case (funct3)
                     ADDI_FUNC3: begin
-                        final_result = $signed(rdata1) + $signed(imm);
+                        wdata = $signed(rdata1) + $signed(imm[11:0]);
                     end
                     SLTI_FUNC3: begin
-                        final_result = ($signed(rdata1) < $signed(imm)) ? 1 : 0;
+                        wdata = ($signed(rdata1) < $signed(imm[11:0])) ? 1 : 0;
                     end
                     SLLI_FUNC3: begin
-                        final_result = rdata1 << imm;
+                        wdata = rdata1 << imm;
                     end
                     SRAI_FUNC3: begin
-                        final_result = rdata1 >> imm;
+                        wdata = rdata1 >> imm;
                     end
                     default: begin
                         alu_valid = 0;
@@ -282,27 +290,26 @@ module CHIP #(                                                                  
                         alu_op = 0;
                     end
                 endcase
-                wdata = final_result;
             end
             LW: begin
                 state_nxt = S_EX;
                 wdata = mem_rdata;
                 mem_cen = 1;
-                mem_addr = $signed({1'b0, rdata1}) + $signed(i_IMEM_data[31:20]);
+                mem_addr = $signed({1'b0, rdata1}) + $signed(instruction[31:20]);
                 mem_wen = 0;
                 reg_wen = 1;
             end
             SW: begin
                 state_nxt = S_EX;
                 mem_cen = 1;
-                mem_addr = $signed(rdata1) + $signed({i_IMEM_data[31:25], i_IMEM_data[11:7]});
+                mem_addr = $signed({1'b0, rdata1}) + $signed({instruction[31:25], instruction[11:7]});
                 mem_wen = 1;
                 mem_wdata = rdata2;
                 reg_wen = 0;
             end
             B_TYPE: begin
                 state_nxt = S_EX;
-                imm[12:0] = {i_IMEM_data[31], i_IMEM_data[7], i_IMEM_data[30:25], i_IMEM_data[11:8], 1'b0};
+                imm[12:0] = {instruction[31], instruction[7], instruction[30:25], instruction[11:8], 1'b0};
                 case (funct3)
                     BEQ_FUNC3: begin
                         if (rdata1 == rdata2) begin
@@ -360,6 +367,12 @@ module CHIP #(                                                                  
         else begin
             next_PC = PC + 4;
         end 
+
+        $display("instruction: %h", instruction);
+        $display("rs1(%d): %d", rs1, rdata1);
+        $display("rs2(%d): %d", rs2, rdata2);
+        $display("rd(%d): %d", rd, wdata);
+        $display("PC: %d", PC);
         
     end
     // Todo: any combinational/sequential circuit
@@ -370,7 +383,7 @@ module CHIP #(                                                                  
             is_finish <= 0;
             state <= state_nxt;
         end
-        if (mem_stall) begin
+        else if (mem_stall) begin
             PC <= PC;
             is_finish <= is_finish_nxt;
             state <= state_nxt;
@@ -481,7 +494,7 @@ module MULDIV_unit #(
     input                       i_valid, // input valid signal
     input [DATA_W - 1 : 0]      i_A,     // input operand A
     input [DATA_W - 1 : 0]      i_B,     // input operand B
-    input [         2 : 0]      i_inst,  // i_IMEM_data
+    input [         2 : 0]      i_inst,  // instruction
 
     output [2*DATA_W - 1 : 0]   o_data,  // output value
     output                      o_done   // output valid signal
