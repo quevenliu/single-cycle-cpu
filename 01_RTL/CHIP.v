@@ -209,14 +209,14 @@ module CHIP #(                                                                  
                 state_nxt = S_EX;
                 imm[20:0] = {i_IMEM_data[31], i_IMEM_data[19:12], i_IMEM_data[20], i_IMEM_data[30:21], 1'b0};
                 wdata = PC + 4;
-                next_PC = PC + imm;
+                next_PC = $signed({1'b0, PC}) + $signed(imm[20:0]);
             end
             JALR: begin
                 reg_wen = 1;
                 state_nxt = S_EX;
                 imm[11:0] = i_IMEM_data[31:20];
                 wdata = PC + 4;
-                next_PC = $signed(rdata1) + $signed(imm);
+                next_PC = $signed(rdata1) + $signed(imm[11:0]);
             end
             R_TYPE: begin
                 reg_wen = 1;
@@ -273,7 +273,7 @@ module CHIP #(                                                                  
                         final_result = rdata1 << imm;
                     end
                     SRAI_FUNC3: begin
-                        final_result = $signed(rdata1) >> imm;
+                        final_result = rdata1 >> imm;
                     end
                     default: begin
                         alu_valid = 0;
@@ -288,14 +288,14 @@ module CHIP #(                                                                  
                 state_nxt = S_EX;
                 wdata = mem_rdata;
                 mem_cen = 1;
-                mem_addr = $signed(rdata1) + $signed(i_IMEM_data[31:20]);
+                mem_addr = $signed({1'b0, rdata1}) + $signed(i_IMEM_data[31:20]);
                 mem_wen = 0;
                 reg_wen = 1;
             end
             SW: begin
                 state_nxt = S_EX;
                 mem_cen = 1;
-                mem_addr = $signed(rdata1) + $signed(i_IMEM_data[31:25]);
+                mem_addr = $signed(rdata1) + $signed({i_IMEM_data[31:25], i_IMEM_data[11:7]});
                 mem_wen = 1;
                 mem_wdata = rdata2;
                 reg_wen = 0;
@@ -306,7 +306,7 @@ module CHIP #(                                                                  
                 case (funct3)
                     BEQ_FUNC3: begin
                         if (rdata1 == rdata2) begin
-                            next_PC = PC + $signed(imm[12:0]);
+                            next_PC = $signed({1'b0, PC}) + $signed(imm[12:0]);
                         end
                         else begin
                             next_PC = PC + 4;
@@ -314,7 +314,7 @@ module CHIP #(                                                                  
                     end
                     BNE_FUNC3: begin
                         if (rdata1 != rdata2) begin
-                            next_PC = PC + $signed(imm[12:0]);
+                            next_PC = $signed({1'b0, PC}) + $signed(imm[12:0]);
                         end
                         else begin
                             next_PC = PC + 4;
@@ -322,7 +322,7 @@ module CHIP #(                                                                  
                     end
                     BLT_FUNC3: begin
                         if ($signed(rdata1) < $signed(rdata2)) begin
-                            next_PC = PC + $signed(imm[12:0]);
+                            next_PC = $signed({1'b0, PC}) + $signed(imm[12:0]);
                         end
                         else begin
                             next_PC = PC + 4;
@@ -330,7 +330,7 @@ module CHIP #(                                                                  
                     end
                     BGE_FUNC3: begin
                         if ($signed(rdata1) >= $signed(rdata2)) begin
-                            next_PC = PC + $signed(imm[12:0]);
+                            next_PC = $signed({1'b0, PC}) + $signed(imm[12:0]);
                         end
                         else begin
                             next_PC = PC + 4;
