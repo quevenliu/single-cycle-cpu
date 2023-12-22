@@ -79,7 +79,6 @@ module CHIP #(                                                                  
     // FSM states
     parameter S_IDLE = 2'd0;
     parameter S_EX = 2'd1;
-    parameter S_MEM = 2'd2;
     parameter S_MUL = 2'd3;
 
 
@@ -378,7 +377,7 @@ module CHIP #(                                                                  
         if (!i_rst_n) begin
             PC <= 32'h00010000; // Do not modify this value!!!
             is_finish <= 0;
-            state <= state_nxt;
+            state <= S_EX;
         end
         else if (mem_stall) begin
             PC <= PC;
