@@ -79,7 +79,6 @@ module CHIP #(                                                                  
     // FSM states
     parameter S_IDLE = 2'd0;
     parameter S_EX = 2'd1;
-    parameter S_MEM = 2'd2;
     parameter S_MUL = 2'd3;
 
 
@@ -302,18 +301,12 @@ module CHIP #(                                                                  
                 endcase
             end
             LW: begin
+                state_nxt = S_EX;
                 wdata = mem_rdata;
                 mem_cen = 1;
                 mem_addr = $signed({1'b0, rdata1}) + $signed(instruction[31:20]);
                 mem_wen = 0;
-                if (mem_stall || state == S_EX) begin
-                    reg_wen = 0;
-                    state_nxt = S_MEM;
-                end
-                else begin
-                    reg_wen = 1;
-                    state_nxt = S_EX;
-                end
+                reg_wen = 1;
             end
             SW: begin
                 state_nxt = S_EX;
@@ -376,22 +369,6 @@ module CHIP #(                                                                  
                 state_nxt = S_EX;
             end
         endcase
-
-        // For all ld, display the memory address and data
-        if (op_code == LW || op_code == SW) begin
-            if (op_code == LW) begin
-                $display("LW");
-                $display("MEM[%d] = %d", mem_addr, mem_rdata);
-            end else begin
-                $display("SW");
-                $display("MEM[%d] = %d", mem_addr, mem_wdata);
-            end
-           
-            $display("rs1 (%d) = %d", rs1, rdata1);
-            $display("rs2 (%d) = %d", rs2, rdata2);
-            $display("rd (%d) = %d", rd, wdata);
-        end
-        $display("instruction = %h", instruction);
         
     end
     // Todo: any combinational/sequential circuit
@@ -406,7 +383,6 @@ module CHIP #(                                                                  
             PC <= PC;
             is_finish <= is_finish_nxt;
             state <= state_nxt;
-            $display("STALL");
         end
         else begin
             PC <= next_PC;
