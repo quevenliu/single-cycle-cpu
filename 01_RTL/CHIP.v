@@ -287,10 +287,11 @@ module CHIP #(                                                                  
                         wdata = ($signed(rdata1) < $signed(imm[11:0])) ? 1 : 0;
                     end
                     SLLI_FUNC3: begin
-                        wdata = rdata1 << imm;
+                        wdata = rdata1 << imm[5:0];
                     end
                     SRAI_FUNC3: begin
-                        wdata = $signed(rdata1) >> imm;
+                        wdata = rdata1 >> imm[5:0];
+                        wdata = $signed(wdata);
                     end
                     default: begin
                         alu_valid = 0;
