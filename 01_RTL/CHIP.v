@@ -103,7 +103,7 @@ module CHIP #(                                                                  
 
         reg is_finish, is_finish_nxt;
 
-        reg [1: 0] state = S_EX;
+        reg [1: 0] state;
         reg [1: 0] state_nxt;
 
         reg [6: 0] op_code;
@@ -284,8 +284,7 @@ module CHIP #(                                                                  
                         wdata = rdata1 << imm[5:0];
                     end
                     SRAI_FUNC3: begin
-                        wdata = rdata1 >> imm[5:0];
-                        wdata = $signed(wdata);
+                        wdata = $signed(rdata1) >>> imm[5:0];
                     end
                     default: begin
                         alu_valid = 0;
