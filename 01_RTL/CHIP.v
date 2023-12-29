@@ -28,12 +28,6 @@ module CHIP #(                                                                  
 // Parameters
 // ------------------------------------------------------------------------------------------------------------------------------------------------------
 
-    initial begin
-            $fsdbDumpfile ("CHIP.fsdb");
-            $fsdbDumpvars (1, CHIP);
-        end
-
-
 //OP code
     // R-type
     parameter R_TYPE   = 7'b0110011;
